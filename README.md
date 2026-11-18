@@ -4,16 +4,17 @@ Builds SDL3, SDL_image, SDL_ttf, SDL_mixer and SDL_shadercross (library + CLI) f
 desktop targets and publishes them as GitHub releases. Projects download
 the archive for their target instead of building SDL themselves.
 
-| Target                | Runner           | shadercross                 |
-|-----------------------|------------------|-----------------------------|
-| `x86_64-windows-msvc` | `windows-latest` | yes (prebuilt DXC)          |
-| `x86_64-linux-gnu`    | `ubuntu-22.04`   | yes (prebuilt DXC)          |
-| `aarch64-macos`       | `macos-latest`   | yes (DXC from source, slow) |
+| Target                | Runner                                 | shadercross                 |
+|-----------------------|----------------------------------------|-----------------------------|
+| `x86_64-windows-msvc` | `windows-2025`                         | yes (prebuilt DXC)          |
+| `x86_64-linux-gnu`    | Steam Linux Runtime 3.0 (sniper) SDK   | yes (DXC from source, slow) |
+| `aarch64-macos`       | `macos-latest`                         | yes (DXC from source, slow) |
 
 Target names are Zig-style `<arch>-<os>[-<abi>]` triples. The ABI says what
 the binaries are compatible with: `msvc` means MSVC libraries with the static
-CRT (`/MT`), not MinGW; `gnu` means glibc, not musl. The Linux build needs at
-least the glibc of Ubuntu 22.04 (2.35). macOS 11.0 or newer.
+CRT (`/MT`), not MinGW; `gnu` means glibc, not musl. The Linux build is made in
+Valve's Steam Linux Runtime 3.0 ("sniper", Debian 11), so it needs glibc
+2.31 or newer and also runs inside that runtime. macOS 11.0 or newer.
 
 ## Layout
 
@@ -57,7 +58,11 @@ Requirements: CMake 3.24+, Ninja, Git, and a C/C++ compiler.
 - **Windows:** Visual Studio 2022 or newer with the C++ workload. Run the
   `.cmd` scripts from an x64 MSVC environment (the "x64 Native Tools Command
   Prompt", or after calling `vcvars64.bat`); the scripts don't set it up.
-- **Linux:** the packages listed in `.github/workflows/build.yml`.
+- **Linux:** easiest in the same container CI uses, which has every
+  dependency: `registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest`.
+  Building on the host works too, but then the binaries need the host's
+  glibc and SDL only gets the backends whose `-dev` packages are installed
+  (see SDL's `docs/README-linux.md`).
 - **macOS:** Xcode command line tools and `brew install ninja`.
 
 To rebuild one library, run its script directly, e.g.
@@ -177,12 +182,13 @@ foreign import shadercross {
 
 ### Where DXC comes from
 
-- **Windows, Linux:** Microsoft's prebuilt DXC release, whose URL and hash are
+- **Windows:** Microsoft's prebuilt DXC release, whose URL and hash are
   pinned by shadercross itself (`SDL_shadercross/dxc.cmake` downloads it and
   copies the runtime into the stage). SPIRV-Cross is built first as a
   separate project.
-- **macOS:** no prebuilt release exists, so DXC (an LLVM fork) is built from
-  source together with shadercross. Expect 30-60+ minutes.
+- **Linux, macOS:** DXC (an LLVM fork) is built from source together with
+  shadercross. Expect 30-60+ minutes. macOS has no prebuilt release, and
+  the Linux one needs glibc 2.38, much newer than sniper's 2.31.
 
 `SDLSHADERCROSS_INSTALL_RUNTIME` is deliberately off: it would download
 vkd3d and Vulkan components from unpinned `main` branches.

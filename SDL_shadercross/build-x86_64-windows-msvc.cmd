@@ -16,7 +16,7 @@ set STAGE=%ROOT%/stage/%TARGET%
 git -C "%DIR%/source" submodule update --init --depth 1 -- external/SPIRV-Cross || exit /b 1
 
 rem DXC first: shadercross's configure step looks for it.
-cmake -DSYSTEM=Windows "-DBUILD=%BUILD%" "-DSTAGE=%STAGE%" -P "%DIR%/dxc.cmake" || exit /b 1
+cmake "-DBUILD=%BUILD%" "-DSTAGE=%STAGE%" -P "%DIR%/dxc.cmake" || exit /b 1
 
 cmake -S "%DIR%/source/external/SPIRV-Cross" -B "%BUILD%/SPIRV-Cross" -G Ninja -C "%DIR%/spirv-cross.cmake" ^
   "-DCMAKE_INSTALL_PREFIX=%STAGE%" || exit /b 1

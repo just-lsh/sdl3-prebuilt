@@ -12,14 +12,19 @@ jobs:
   build:
     name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    # Empty for targets that build directly on the runner.
+    container: ${{ matrix.container }}
     timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { target: x86_64-windows-msvc, os: windows-latest }
-          # Oldest supported Ubuntu = oldest glibc = runs on the most distros.
-          - { target: x86_64-linux-gnu,    os: ubuntu-22.04 }
+          # Pinned: the Windows build step hardcodes this image's Visual Studio path.
+          - { target: x86_64-windows-msvc, os: windows-2025 }
+          # Steam Linux Runtime 3.0 (sniper) SDK: Debian 11, glibc 2.31, so the
+          # libraries run on most distros and inside Steam's runtime. It ships
+          # the SDL build dependencies and the toolchain.
+          - { target: x86_64-linux-gnu,    os: ubuntu-latest, container: 'registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest' }
           - { target: aarch64-macos,       os: macos-latest }
 
     steps:
@@ -28,22 +33,12 @@ jobs:
           # Top-level submodules only. The build scripts fetch the nested ones they need.
           submodules: true
 
-      - name: Install Linux build dependencies
+      # The checkout belongs to a different user than the container's root, so
+      # Git refuses to work in it. The build scripts run git to fetch nested
+      # submodules.
+      - name: Trust the checkout (Linux container)
         if: runner.os == 'Linux'
-        # From SDL's docs/README-linux.md. Without these, SDL silently builds
-        # without the matching video/audio/input backends.
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends \
-            ninja-build pkg-config \
-            libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev \
-            libpipewire-0.3-dev \
-            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
-            libxi-dev libxss-dev libxtst-dev libxkbcommon-dev \
-            libwayland-dev libdecor-0-dev \
-            libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
-            libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libfribidi-dev \
-            libusb-1.0-0-dev
+        run: git config --global --add safe.directory '*'
 
       - name: Install macOS build dependencies
         if: runner.os == 'macOS'
@@ -56,10 +51,10 @@ jobs:
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: cmd
-        # The .cmd scripts expect an x64 MSVC environment.
+        # The .cmd scripts expect an x64 MSVC environment. This is Visual
+        # Studio 2026 (version 18) on the windows-2025 image.
         run: |
-          for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set VS=%%i
-          call "%VS%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
           call build-${{ matrix.target }}.cmd
 
       - name: Build

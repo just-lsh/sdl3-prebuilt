@@ -1,6 +1,6 @@
 # SDL_shadercross's CMake options, the same for every target. The build
 # scripts add -DSDLSHADERCROSS_VENDORED=ON|OFF: OFF uses Microsoft's prebuilt
-# DXC (Windows x64, Linux x64), ON builds DXC from source (macOS; slow).
+# DXC (Windows), ON builds DXC from source (Linux, macOS; slow).
 #
 # Shared + static library and the CLI, for build-time shader tooling.
 # Both library variants call DXC's DxcCreateInstance directly, so anything
