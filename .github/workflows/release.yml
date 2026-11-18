@@ -1,0 +1,56 @@
+# Pushing a tag like 3.4.20-r1 builds all targets and publishes a release
+# with <target>.tar.gz and <target>.tar.gz.sha256 for each target.
+name: release
+
+on:
+  push:
+    tags: ['*-r*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Write release notes
+        run: |
+          {
+            echo "Built from \`${GITHUB_SHA}\`."
+            echo
+            echo '| Library | Commit |'
+            echo '|---|---|'
+            # Submodule pins (<lib>/source), read from the tagged commit.
+            git ls-tree -r HEAD | while read -r mode type sha path; do
+              [ "$type" = commit ] || continue
+              echo "| ${path%/source} | \`${sha:0:12}\` |"
+            done
+            echo
+            echo '### SHA-256'
+            echo '```'
+            cat dist/*.sha256
+            echo '```'
+          } > notes.md
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            --verify-tag

@@ -1,0 +1,18 @@
+# Every pull request (e.g. a version bump) is built on all targets.
+# Merge only when it is green; then tag to release.
+name: ci
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml

@@ -1,0 +1,77 @@
+# Builds every target and uploads one artifact per target.
+# Called by ci.yml (pull requests) and release.yml (tags); not run on its own.
+name: build
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-windows-msvc, os: windows-latest }
+          # Oldest supported Ubuntu = oldest glibc = runs on the most distros.
+          - { target: x86_64-linux-gnu,    os: ubuntu-22.04 }
+          - { target: aarch64-macos,       os: macos-latest }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Top-level submodules only. The build scripts fetch the nested ones they need.
+          submodules: true
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        # From SDL's docs/README-linux.md. Without these, SDL silently builds
+        # without the matching video/audio/input backends.
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build pkg-config \
+            libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev \
+            libpipewire-0.3-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
+            libxi-dev libxss-dev libxtst-dev libxkbcommon-dev \
+            libwayland-dev libdecor-0-dev \
+            libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
+            libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libfribidi-dev \
+            libusb-1.0-0-dev
+
+      - name: Install macOS build dependencies
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install Windows build dependencies
+        if: runner.os == 'Windows'
+        run: choco install ninja -y --no-progress
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        # The .cmd scripts expect an x64 MSVC environment.
+        run: |
+          for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set VS=%%i
+          call "%VS%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          call build-${{ matrix.target }}.cmd
+
+      - name: Build
+        if: runner.os != 'Windows'
+        run: ./build-${{ matrix.target }}.sh
+
+      - name: Package
+        run: cmake -DTARGET=${{ matrix.target }} -P cmake/package.cmake
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
