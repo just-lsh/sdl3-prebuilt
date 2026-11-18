@@ -14,3 +14,8 @@
 	path = SDL_mixer/source
 	url = https://github.com/libsdl-org/SDL_mixer.git
 	shallow = true
+[submodule "SDL_shadercross/source"]
+	path = SDL_shadercross/source
+	url = https://github.com/libsdl-org/SDL_shadercross.git
+	shallow = true
+	ignore = untracked
