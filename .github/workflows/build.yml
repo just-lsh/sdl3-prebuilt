@@ -1,9 +1,24 @@
-# Builds every target and uploads one artifact per target.
-# Called by ci.yml (pull requests) and release.yml (tags); not run on its own.
+# Builds libraries for every target and uploads one artifact per target,
+# holding one archive per packaged library.
+# Called by ci.yml (pull requests: everything) and release.yml (tags: one
+# library); not run on its own.
 name: build
 
 on:
   workflow_call:
+    inputs:
+      libraries:
+        description: Libraries to build, in order. SDL has to come first.
+        type: string
+        default: SDL SDL_image SDL_ttf SDL_mixer SDL_shadercross
+      package:
+        description: Libraries to package.
+        type: string
+        default: SDL SDL_image SDL_ttf SDL_mixer SDL_shadercross
+      name:
+        description: Archive base name (releases pass the tag). Defaults to the library name.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -24,8 +39,12 @@ jobs:
           # Steam Linux Runtime 3.0 (sniper) SDK: Debian 11, glibc 2.31, so the
           # libraries run on most distros and inside Steam's runtime. It ships
           # the SDL build dependencies and the toolchain.
-          - { target: x86_64-linux-gnu,    os: ubuntu-latest, container: 'registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest' }
-          - { target: aarch64-macos,       os: macos-latest }
+          - {
+              target: x86_64-linux-gnu,
+              os: ubuntu-latest,
+              container: "registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest",
+            }
+          - { target: aarch64-macos, os: macos-latest }
 
     steps:
       - uses: actions/checkout@v4
@@ -51,18 +70,24 @@ jobs:
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: cmd
-        # The .cmd scripts expect an x64 MSVC environment. This is Visual
-        # Studio 2026 (version 18) on the windows-2025 image.
         run: |
           call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
-          call build-${{ matrix.target }}.cmd
+          for %%L in (${{ inputs.libraries }}) do call %%L\build-${{ matrix.target }}.cmd || exit /b 1
 
       - name: Build
         if: runner.os != 'Windows'
-        run: ./build-${{ matrix.target }}.sh
+        run: |
+          for lib in ${{ inputs.libraries }}; do
+            ./$lib/build-${{ matrix.target }}.sh
+          done
 
       - name: Package
-        run: cmake -DTARGET=${{ matrix.target }} -P cmake/package.cmake
+        shell: bash
+        run: |
+          name='${{ inputs.name }}'
+          for lib in ${{ inputs.package }}; do
+            cmake -DTARGET=${{ matrix.target }} -DLIB=$lib "-DNAME=${name:-$lib}" -P cmake/package.cmake
+          done
 
       - uses: actions/upload-artifact@v4
         with:
