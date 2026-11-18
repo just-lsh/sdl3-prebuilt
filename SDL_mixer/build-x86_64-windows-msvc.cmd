@@ -11,18 +11,20 @@ set ROOT=%ROOT:\=/%
 set BUILD=%ROOT%/build/%TARGET%/SDL_mixer
 set STAGE=%ROOT%/stage/%TARGET%
 
-call :build shared ON || exit /b 1
-call :build static OFF || exit /b 1
-
-cmake "-DNAME=SDL_mixer" "-DSOURCE=%DIR%/source" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1
-exit /b 0
-
-rem build <shared|static> <BUILD_SHARED_LIBS>
-:build
-cmake -S "%DIR%/source" -B "%BUILD%/%1" -G Ninja -C "%DIR%/cache.cmake" ^
-  -DBUILD_SHARED_LIBS=%2 ^
+rem Shared libraries.
+cmake -S "%DIR%/source" -B "%BUILD%/shared" -G Ninja -C "%DIR%/cache.cmake" ^
+  -DBUILD_SHARED_LIBS=ON ^
   "-DCMAKE_INSTALL_PREFIX=%STAGE%" ^
   "-DCMAKE_PREFIX_PATH=%STAGE%" || exit /b 1
-cmake --build "%BUILD%/%1" || exit /b 1
-cmake --install "%BUILD%/%1" || exit /b 1
-exit /b 0
+cmake --build "%BUILD%/shared" || exit /b 1
+cmake --install "%BUILD%/shared" || exit /b 1
+
+rem Static libraries.
+cmake -S "%DIR%/source" -B "%BUILD%/static" -G Ninja -C "%DIR%/cache.cmake" ^
+  -DBUILD_SHARED_LIBS=OFF ^
+  "-DCMAKE_INSTALL_PREFIX=%STAGE%" ^
+  "-DCMAKE_PREFIX_PATH=%STAGE%" || exit /b 1
+cmake --build "%BUILD%/static" || exit /b 1
+cmake --install "%BUILD%/static" || exit /b 1
+
+cmake "-DNAME=SDL_mixer" "-DSOURCE=%DIR%/source" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1
