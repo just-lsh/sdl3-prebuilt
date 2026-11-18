@@ -1,12 +1,12 @@
 #!/bin/sh
-# Build SDL for aarch64-macos into stage/aarch64-macos/.
+# Build SDL for aarch64-macos into stage/aarch64-macos/SDL/.
 set -eu
 
 TARGET=aarch64-macos
 DIR=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(dirname "$DIR")
 BUILD=$ROOT/build/$TARGET/SDL
-STAGE=$ROOT/stage/$TARGET
+STAGE=$ROOT/stage/$TARGET/SDL
 
 # Libraries find each other next to themselves, executables look in ../lib.
 cmake -S "$DIR/source" -B "$BUILD" -G Ninja -C "$DIR/cache.cmake" \

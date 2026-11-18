@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build every library for x86_64-linux-gnu into a fresh stage/x86_64-linux-gnu/.
-# Order matters: the satellites and shadercross find SDL in the stage.
+# Order matters: the other libraries build against the SDL in the stage.
 set -eu
 ROOT=$(cd "$(dirname "$0")" && pwd)
 

@@ -1,13 +1,14 @@
 #!/bin/sh
-# Build SDL_image (shared and static) for x86_64-linux-gnu into stage/x86_64-linux-gnu/.
-# Needs SDL in the stage first.
+# Build SDL_image (shared and static) for x86_64-linux-gnu into stage/x86_64-linux-gnu/SDL_image/.
+# Needs SDL built first.
 set -eu
 
 TARGET=x86_64-linux-gnu
 DIR=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(dirname "$DIR")
 BUILD=$ROOT/build/$TARGET/SDL_image
-STAGE=$ROOT/stage/$TARGET
+STAGE=$ROOT/stage/$TARGET/SDL_image
+SDL_STAGE=$ROOT/stage/$TARGET/SDL
 
 # Vendored third-party code for the enabled features (see cache.cmake).
 git -C "$DIR/source" submodule update --init --depth 1 -- external/libwebp
@@ -17,7 +18,7 @@ git -C "$DIR/source" submodule update --init --depth 1 -- external/libwebp
 cmake -S "$DIR/source" -B "$BUILD/shared" -G Ninja -C "$DIR/cache.cmake" \
   -DBUILD_SHARED_LIBS=ON \
   "-DCMAKE_INSTALL_PREFIX=$STAGE" \
-  "-DCMAKE_PREFIX_PATH=$STAGE" \
+  "-DCMAKE_PREFIX_PATH=$SDL_STAGE" \
   '-DCMAKE_INSTALL_RPATH=$ORIGIN:$ORIGIN/../lib'
 cmake --build "$BUILD/shared"
 cmake --install "$BUILD/shared"
@@ -26,7 +27,7 @@ cmake --install "$BUILD/shared"
 cmake -S "$DIR/source" -B "$BUILD/static" -G Ninja -C "$DIR/cache.cmake" \
   -DBUILD_SHARED_LIBS=OFF \
   "-DCMAKE_INSTALL_PREFIX=$STAGE" \
-  "-DCMAKE_PREFIX_PATH=$STAGE" \
+  "-DCMAKE_PREFIX_PATH=$SDL_STAGE" \
   '-DCMAKE_INSTALL_RPATH=$ORIGIN:$ORIGIN/../lib'
 cmake --build "$BUILD/static"
 cmake --install "$BUILD/static"

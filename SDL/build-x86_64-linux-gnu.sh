@@ -1,12 +1,12 @@
 #!/bin/sh
-# Build SDL for x86_64-linux-gnu into stage/x86_64-linux-gnu/.
+# Build SDL for x86_64-linux-gnu into stage/x86_64-linux-gnu/SDL/.
 set -eu
 
 TARGET=x86_64-linux-gnu
 DIR=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(dirname "$DIR")
 BUILD=$ROOT/build/$TARGET/SDL
-STAGE=$ROOT/stage/$TARGET
+STAGE=$ROOT/stage/$TARGET/SDL
 
 # $ORIGIN is for the dynamic linker: libraries find each other next to
 # themselves, executables look in ../lib.

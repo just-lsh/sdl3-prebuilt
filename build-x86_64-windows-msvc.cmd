@@ -1,7 +1,7 @@
 @echo off
 rem Build every library for x86_64-windows-msvc into a fresh stage\x86_64-windows-msvc\.
 rem Run from an x64 MSVC environment (vcvars64.bat). Order matters: the
-rem satellites and shadercross find SDL in the stage.
+rem other libraries build against the SDL in the stage.
 setlocal
 
 if exist "%~dp0stage\x86_64-windows-msvc" rmdir /s /q "%~dp0stage\x86_64-windows-msvc"

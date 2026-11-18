@@ -1,7 +1,7 @@
 @echo off
 rem Build SDL_shadercross (shared + static library and the CLI) for
-rem x86_64-windows-msvc into stage\x86_64-windows-msvc\, using Microsoft's
-rem prebuilt DXC. Needs SDL in the stage first.
+rem x86_64-windows-msvc into stage\x86_64-windows-msvc\SDL_shadercross\,
+rem using Microsoft's prebuilt DXC. Needs SDL built first.
 rem Run from an x64 MSVC environment (vcvars64.bat).
 setlocal
 
@@ -11,7 +11,8 @@ for %%I in ("%~dp0..") do set ROOT=%%~fI
 set DIR=%DIR:\=/%
 set ROOT=%ROOT:\=/%
 set BUILD=%ROOT%/build/%TARGET%/SDL_shadercross
-set STAGE=%ROOT%/stage/%TARGET%
+set STAGE=%ROOT%/stage/%TARGET%/SDL_shadercross
+set SDL_STAGE=%ROOT%/stage/%TARGET%/SDL
 
 git -C "%DIR%/source" submodule update --init --depth 1 -- external/SPIRV-Cross || exit /b 1
 
@@ -26,7 +27,7 @@ cmake --install "%BUILD%/SPIRV-Cross" || exit /b 1
 cmake -S "%DIR%/source" -B "%BUILD%/shadercross" -G Ninja -C "%DIR%/cache.cmake" ^
   -DSDLSHADERCROSS_VENDORED=OFF ^
   "-DCMAKE_INSTALL_PREFIX=%STAGE%" ^
-  "-DCMAKE_PREFIX_PATH=%STAGE%" || exit /b 1
+  "-DCMAKE_PREFIX_PATH=%STAGE%;%SDL_STAGE%" || exit /b 1
 cmake --build "%BUILD%/shadercross" || exit /b 1
 cmake --install "%BUILD%/shadercross" || exit /b 1
 
