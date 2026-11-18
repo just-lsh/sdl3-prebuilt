@@ -1,0 +1,4 @@
+[submodule "SDL/source"]
+	path = SDL/source
+	url = https://github.com/libsdl-org/SDL.git
+	shallow = true

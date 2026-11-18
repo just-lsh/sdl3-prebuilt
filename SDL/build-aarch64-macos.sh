@@ -1,0 +1,19 @@
+#!/bin/sh
+# Build SDL for aarch64-macos into stage/aarch64-macos/.
+set -eu
+
+TARGET=aarch64-macos
+DIR=$(cd "$(dirname "$0")" && pwd)
+ROOT=$(dirname "$DIR")
+BUILD=$ROOT/build/$TARGET/SDL
+STAGE=$ROOT/stage/$TARGET
+
+# Libraries find each other next to themselves, executables look in ../lib.
+cmake -S "$DIR/source" -B "$BUILD" -G Ninja -C "$DIR/cache.cmake" \
+  "-DCMAKE_INSTALL_PREFIX=$STAGE" \
+  -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+  '-DCMAKE_INSTALL_RPATH=@loader_path;@loader_path/../lib'
+cmake --build "$BUILD"
+cmake --install "$BUILD"
+cmake "-DNAME=SDL" "-DSOURCE=$DIR/source" "-DSTAGE=$STAGE" -P "$ROOT/cmake/record.cmake"
