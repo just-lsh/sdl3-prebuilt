@@ -31,7 +31,7 @@ cmake/
   licenses.cmake                copy vendored third-party licenses into the stage
   version.cmake                 print a library's version (header, or short commit)
   record.cmake                  write stage/<target>/<lib>/manifest/<lib>.txt
-  package.cmake                 stage/<target>/<lib>/ -> dist/<name>-<target>.tar.gz + .sha256
+  package.cmake                 stage/<target>/<lib>/ -> dist/<name>-<target>.zip/.tar.gz + .sha256
 .github/workflows/
   build.yml                     matrix build, reused by the two below
   ci.yml                        pull requests: build all libraries for all targets
@@ -110,7 +110,8 @@ Tags are `<lib>-<version>-r<n>`:
 The release workflow first checks the tag against the pinned submodule and
 stops if they don't match. It then builds SDL plus the tagged library for
 every target, and publishes only the tagged library:
-`<tag>-<target>.tar.gz` and `.sha256` for each target. The notes list the
+`<tag>-<target>.zip` (Windows) or `.tar.gz` (Linux, macOS) and a
+`.sha256` for each target. The notes list the
 commit, the SDL the library was built against, and the checksums.
 
 To fix an older release after `main` has moved on, branch from its tag
@@ -130,6 +131,9 @@ for f in SDL-3.4.20-r1 SDL_image-3.4.8-r1 SDL_shadercross-1ff05be-r1; do
 done
 # deps/x86_64-linux-gnu/ now has SDL, SDL_image and SDL_shadercross
 ```
+
+On Windows the archives are `.zip`; Windows' `tar` extracts them the same
+way (`tar xf <file>.zip -C deps`), or use Explorer / `Expand-Archive`.
 
 Every library except SDL needs the SDL archive too. Each one records the
 SDL it was built against in `manifest/<lib>.txt` (`sdl-version=`), which

@@ -1,4 +1,6 @@
-# Packs one library's stage into dist/<name>-<target>.tar.gz plus a .sha256 file.
+# Packs one library's stage into dist/<name>-<target>.zip on Windows or
+# dist/<name>-<target>.tar.gz elsewhere (keeps the .so/.dylib symlinks),
+# plus a .sha256 file.
 #
 #   cmake -DTARGET=<target> -DLIB=<lib> [-DNAME=<name>] -P cmake/package.cmake
 #
@@ -41,14 +43,23 @@ if(IS_DIRECTORY "${dir}/share/licenses")
   endif()
 endif()
 
-set(archive "${ROOT}/dist/${NAME}-${TARGET}.tar.gz")
+if("${TARGET}" MATCHES "windows")
+  set(file "${NAME}-${TARGET}.zip")
+  set(archive "${ROOT}/dist/${file}")
+  set(tar_args cf "${archive}" --format=zip)
+else()
+  set(file "${NAME}-${TARGET}.tar.gz")
+  set(archive "${ROOT}/dist/${file}")
+  set(tar_args czf "${archive}")
+endif()
 file(MAKE_DIRECTORY "${ROOT}/dist")
 file(REMOVE "${archive}" "${archive}.sha256")
 execute_process(
-  COMMAND "${CMAKE_COMMAND}" -E tar czf "${archive}" "${TARGET}"
+  COMMAND "${CMAKE_COMMAND}" -E tar ${tar_args} "${TARGET}"
   WORKING_DIRECTORY "${work}"
   COMMAND_ERROR_IS_FATAL ANY)
 
 file(SHA256 "${archive}" hash)
-file(WRITE "${archive}.sha256" "${hash}  ${NAME}-${TARGET}.tar.gz\n")
+# LF even on Windows, where file(WRITE) would write CRLF and break `sha256sum -c`.
+file(CONFIGURE OUTPUT "${archive}.sha256" CONTENT "${hash}  ${file}\n" @ONLY NEWLINE_STYLE UNIX)
 message(STATUS "${archive}")

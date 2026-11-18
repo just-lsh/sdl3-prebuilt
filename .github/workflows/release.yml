@@ -1,6 +1,6 @@
 # Pushing a tag <lib>-<version>-r<n> (e.g. SDL_image-3.4.8-r1) builds that
 # library for all targets and publishes a release with
-# <tag>-<target>.tar.gz and .sha256 for each target.
+# <tag>-<target>.zip (Windows) or .tar.gz (others) and .sha256 for each target.
 name: release
 
 on:
@@ -73,7 +73,7 @@ jobs:
         env:
           LIB: ${{ needs.resolve.outputs.library }}
         run: |
-          # Every target records the same sources; read them from one archive.
+          # Every target records the same sources; read them from one .tar.gz.
           archive=$(ls dist/*.tar.gz | head -n 1)
           tar xzf "$archive" --wildcards "*/manifest/$LIB.txt" --strip-components 2
           version=$(sed -n 's/^version=//p' "$LIB.txt")
