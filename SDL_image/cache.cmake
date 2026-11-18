@@ -16,6 +16,10 @@ set(SDLIMAGE_VENDORED ON CACHE BOOL "")
 set(SDLIMAGE_DEPS_SHARED OFF CACHE BOOL "")
 set(SDLIMAGE_SAMPLES OFF CACHE BOOL "")
 set(SDLIMAGE_TESTS OFF CACHE BOOL "")
+# pkg-config files find the prefix relative to themselves instead of
+# hardcoding the build machine's install path (default ON only for MSVC).
+set(SDLIMAGE_RELOCATABLE ON CACHE BOOL "")
+
 set(SDLIMAGE_BACKEND_STB ON CACHE BOOL "")
 set(SDLIMAGE_BACKEND_IMAGEIO OFF CACHE BOOL "")
 set(SDLIMAGE_BACKEND_WIC OFF CACHE BOOL "")

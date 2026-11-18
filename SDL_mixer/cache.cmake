@@ -9,6 +9,10 @@ set(SDLMIXER_VENDORED ON CACHE BOOL "")
 set(SDLMIXER_DEPS_SHARED OFF CACHE BOOL "")
 set(SDLMIXER_TESTS OFF CACHE BOOL "")
 set(SDLMIXER_EXAMPLES OFF CACHE BOOL "")
+# pkg-config files find the prefix relative to themselves instead of
+# hardcoding the build machine's install path (default ON only for MSVC).
+set(SDLMIXER_RELOCATABLE ON CACHE BOOL "")
+
 set(SDLMIXER_FLAC_LIBFLAC OFF CACHE BOOL "")
 set(SDLMIXER_MP3_MPG123 OFF CACHE BOOL "")
 set(SDLMIXER_VORBIS_VORBISFILE OFF CACHE BOOL "")

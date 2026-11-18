@@ -62,7 +62,8 @@ Requirements: CMake 3.24+, Ninja, Git, and a C/C++ compiler.
 
 To rebuild one library, run its script directly, e.g.
 `SDL_image/build-x86_64-linux-gnu.sh`. It installs over what is already in
-the stage.
+the stage. After changing a `cache.cmake`, delete that library's folder in
+`build/<target>/` first: CMake keeps the options it cached on the first run.
 
 ## Updating a library
 
