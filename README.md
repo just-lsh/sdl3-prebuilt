@@ -1,8 +1,9 @@
 # sdl3-prebuilt
 
 Builds SDL3, SDL_image, SDL_ttf, SDL_mixer and SDL_shadercross (library + CLI) for
-desktop targets and publishes them as GitHub releases. Projects download
-the archive for their target instead of building SDL themselves.
+desktop targets and publishes them as GitHub releases, one release per
+library version. Projects download the archives for the libraries and
+target they need instead of building SDL themselves.
 
 | Target                | Runner                                 | shadercross                 |
 |-----------------------|----------------------------------------|-----------------------------|
@@ -28,18 +29,19 @@ build-<target>.sh / .cmd        build every library for one target, in order
 cmake/
   common.cmake                  options every library gets (Release, install dirs)
   licenses.cmake                copy vendored third-party licenses into the stage
-  record.cmake                  write stage/<target>/manifest/<lib>.txt
-  package.cmake                 stage/<target>/ -> dist/<target>.tar.gz + .sha256
+  version.cmake                 print a library's version (header, or short commit)
+  record.cmake                  write stage/<target>/<lib>/manifest/<lib>.txt
+  package.cmake                 stage/<target>/<lib>/ -> dist/<name>-<target>.tar.gz + .sha256
 .github/workflows/
   build.yml                     matrix build, reused by the two below
-  ci.yml                        pull requests: build all targets, keep artifacts 14 days
-  release.yml                   tag push: build all targets, publish a release
+  ci.yml                        pull requests: build all libraries for all targets
+  release.yml                   tag push: build one library for all targets, publish it
 ```
 
-Every script installs into `stage/<target>/`. The satellites and shadercross
-find SDL there, so SDL has to be built first; the top-level
-`build-<target>` scripts start from an empty stage and run the libraries in
-order. Generated (ignored): `build/`, `stage/`, `dist/`.
+Every library installs into its own `stage/<target>/<lib>/`. The satellites
+and shadercross build against `stage/<target>/SDL/`, so SDL has to be built
+first; the top-level `build-<target>` scripts start from an empty stage and
+run the libraries in order. Generated (ignored): `build/`, `stage/`, `dist/`.
 
 ## Getting started
 
@@ -47,7 +49,7 @@ order. Generated (ignored): `build/`, `stage/`, `dist/`.
 git clone <this repo> && cd sdl3-prebuilt
 git submodule update --init --depth 1   # top level only; build scripts fetch nested ones
 ./build-x86_64-linux-gnu.sh             # or the target for your machine
-cmake -DTARGET=x86_64-linux-gnu -P cmake/package.cmake
+cmake -DTARGET=x86_64-linux-gnu -DLIB=SDL_image -P cmake/package.cmake
 ```
 
 `--depth 1` matters: without it Git fetches each library's full history
@@ -67,7 +69,7 @@ Requirements: CMake 3.24+, Ninja, Git, and a C/C++ compiler.
 
 To rebuild one library, run its script directly, e.g.
 `SDL_image/build-x86_64-linux-gnu.sh`. It installs over what is already in
-the stage. After changing a `cache.cmake`, delete that library's folder in
+its stage folder. After changing a `cache.cmake`, delete that library's folder in
 `build/<target>/` first: CMake keeps the options it cached on the first run.
 
 ## Updating a library
@@ -88,16 +90,59 @@ instead.
 
 ## Releasing
 
-After the PR is merged:
+Each library is released on its own. After the PR is merged, tag the
+library:
 
 ```sh
-git tag 3.4.22-r1 && git push origin 3.4.22-r1
+git tag SDL_image-3.4.8-r1 && git push origin SDL_image-3.4.8-r1
 ```
 
-Tags are `<SDL version>-r<n>`. Increase `n` when only satellites, shadercross
-or build options changed. The release contains `<target>.tar.gz` and
-`<target>.tar.gz.sha256` for every target, and notes listing each library's
-commit and the checksums.
+Tags are `<lib>-<version>-r<n>`:
+
+- `<version>` is the upstream version of the pinned submodule, e.g.
+  `SDL-3.4.20`, `SDL_ttf-3.2.2`. SDL_shadercross has no releases, so it uses
+  the submodule's short commit: `SDL_shadercross-1ff05be-r1`.
+  `cmake -DLIB=<lib> -P cmake/version.cmake` prints it.
+- `<n>` starts at 1 and goes up when the same upstream version is released
+  again with a different build (options, scripts, the SDL it's built
+  against).
+
+The release workflow first checks the tag against the pinned submodule and
+stops if they don't match. It then builds SDL plus the tagged library for
+every target, and publishes only the tagged library:
+`<tag>-<target>.tar.gz` and `.sha256` for each target. The notes list the
+commit, the SDL the library was built against, and the checksums.
+
+To fix an older release after `main` has moved on, branch from its tag
+(`git switch -c fix/SDL_image-3.4.8 SDL_image-3.4.8-r1`), fix, and tag
+`-r2` there.
+
+## Using the releases
+
+Each archive holds one library under a `<target>/` folder. Extract the
+archives you need into the same folder; no two archives contain the same
+file:
+
+```sh
+mkdir -p deps
+for f in SDL-3.4.20-r1 SDL_image-3.4.8-r1 SDL_shadercross-1ff05be-r1; do
+  tar xzf $f-x86_64-linux-gnu.tar.gz -C deps
+done
+# deps/x86_64-linux-gnu/ now has SDL, SDL_image and SDL_shadercross
+```
+
+Every library except SDL needs the SDL archive too. Each one records the
+SDL it was built against in `manifest/<lib>.txt` (`sdl-version=`), which
+the release notes repeat. SDL 3 is backward compatible, so **use an SDL
+release at least as new as the newest `sdl-version` among your other
+libraries**.
+
+GitHub's "latest release" is just the most recently published library. To
+find the newest release of one library:
+
+```sh
+gh release list --repo <owner>/sdl3-prebuilt --json tagName --jq '.[].tagName' | grep '^SDL_image-' | head -n 1
+```
 
 ## Archive contents
 
@@ -106,12 +151,13 @@ commit and the checksums.
   lib/          Linux/macOS: libSDL3.so.0 / libSDL3.0.dylib (+ symlinks) and libSDL3.a
                 Windows:     SDL3.lib (import lib) and SDL3-static.lib
                 ...same for SDL3_image, SDL3_ttf, SDL3_mixer, SDL3_shadercross
-                (MSVC static: SDL3_shadercross-static.lib)
-                plus spirv-cross-*.a/.lib and the DXC library (see shadercross below)
+                (MSVC static: SDL3_shadercross-static.lib), each in its own archive.
+                The shadercross archive also has spirv-cross-*.a/.lib and the DXC
+                library (see shadercross below)
   bin/          Windows: the DLLs. All: the shadercross CLI
   include/      C headers
-  licenses/     one folder per library, including vendored third-party code
-  manifest/     <lib>.txt: the commit each library was built from
+  licenses/     the library's licenses, including vendored third-party code
+  manifest/     <lib>.txt: version, commit, and the SDL it was built against
 ```
 
 ## Notes for linking from Odin
