@@ -1,41 +1,54 @@
-# Packs stage/<target>/ into dist/<target>.tar.gz plus a .sha256 file.
+# Packs one library's stage into dist/<name>-<target>.tar.gz plus a .sha256 file.
 #
-#   cmake -DTARGET=<target> -P cmake/package.cmake
+#   cmake -DTARGET=<target> -DLIB=<lib> [-DNAME=<name>] -P cmake/package.cmake
 #
-# Archive layout (top-level folder = target name):
+# NAME defaults to LIB; releases pass the tag. The archive's top-level folder
+# is <target>/, so archives of different libraries can be extracted into the
+# same folder:
 #   <target>/bin/        DLLs (Windows), shadercross CLI + its runtime
 #   <target>/lib/        .so/.dylib/.a (Linux, macOS); .lib (Windows)
 #   <target>/include/    C headers
-#   <target>/licenses/   one folder per library, incl. vendored third-party code
-#   <target>/manifest/   <lib>.txt: the commit each library was built from
-if(NOT DEFINED TARGET)
-  message(FATAL_ERROR "package.cmake: -DTARGET=... is required")
+#   <target>/licenses/   the library's and its vendored third-party code's
+#   <target>/manifest/   <lib>.txt: version, commit, SDL it was built against
+foreach(var TARGET LIB)
+  if(NOT DEFINED ${var})
+    message(FATAL_ERROR "package.cmake: -D${var}=... is required")
+  endif()
+endforeach()
+if(NOT DEFINED NAME)
+  set(NAME "${LIB}")
 endif()
 
 get_filename_component(ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
-set(STAGE "${ROOT}/stage/${TARGET}")
-if(NOT IS_DIRECTORY "${STAGE}/manifest")
-  message(FATAL_ERROR "stage/${TARGET} is missing or incomplete; run build-${TARGET} first")
+set(STAGE "${ROOT}/stage/${TARGET}/${LIB}")
+if(NOT EXISTS "${STAGE}/manifest/${LIB}.txt")
+  message(FATAL_ERROR "stage/${TARGET}/${LIB} is missing or incomplete; build ${LIB} first")
 endif()
 
+# Copy to <work>/<target>/ so that the archive's top-level folder is the target.
+set(work "${ROOT}/build/package/${LIB}")
+file(REMOVE_RECURSE "${work}")
+file(COPY "${STAGE}/" DESTINATION "${work}/${TARGET}")
+
 # Licenses land in share/licenses/ (Unix) or licenses/ (MSVC). Use one place.
-if(IS_DIRECTORY "${STAGE}/share/licenses")
-  file(COPY "${STAGE}/share/licenses/" DESTINATION "${STAGE}/licenses")
-  file(REMOVE_RECURSE "${STAGE}/share/licenses")
-  file(GLOB rest "${STAGE}/share/*")
+set(dir "${work}/${TARGET}")
+if(IS_DIRECTORY "${dir}/share/licenses")
+  file(COPY "${dir}/share/licenses/" DESTINATION "${dir}/licenses")
+  file(REMOVE_RECURSE "${dir}/share/licenses")
+  file(GLOB rest "${dir}/share/*")
   if(NOT rest)
-    file(REMOVE_RECURSE "${STAGE}/share")
+    file(REMOVE_RECURSE "${dir}/share")
   endif()
 endif()
 
-set(archive "${ROOT}/dist/${TARGET}.tar.gz")
+set(archive "${ROOT}/dist/${NAME}-${TARGET}.tar.gz")
 file(MAKE_DIRECTORY "${ROOT}/dist")
 file(REMOVE "${archive}" "${archive}.sha256")
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E tar czf "${archive}" "${TARGET}"
-  WORKING_DIRECTORY "${ROOT}/stage"
+  WORKING_DIRECTORY "${work}"
   COMMAND_ERROR_IS_FATAL ANY)
 
 file(SHA256 "${archive}" hash)
-file(WRITE "${archive}.sha256" "${hash}  ${TARGET}.tar.gz\n")
-message(STATUS "${hash}  ${TARGET}.tar.gz")
+file(WRITE "${archive}.sha256" "${hash}  ${NAME}-${TARGET}.tar.gz\n")
+message(STATUS "${archive}")
