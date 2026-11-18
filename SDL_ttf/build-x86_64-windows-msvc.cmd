@@ -35,4 +35,4 @@ cmake "-DSOURCE=%DIR%/source/external/freetype" "-DNAME=freetype" "-DSTAGE=%STAG
 cmake "-DSOURCE=%DIR%/source/external/harfbuzz" "-DNAME=harfbuzz" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/licenses.cmake" || exit /b 1
 cmake "-DSOURCE=%DIR%/source/external/plutosvg" "-DNAME=plutosvg" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/licenses.cmake" || exit /b 1
 cmake "-DSOURCE=%DIR%/source/external/plutovg" "-DNAME=plutovg" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/licenses.cmake" || exit /b 1
-cmake "-DNAME=SDL_ttf" "-DSOURCE=%DIR%/source" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1
+cmake "-DNAME=SDL_ttf" "-DSTAGE=%STAGE%" "-DSDL_STAGE=%SDL_STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1

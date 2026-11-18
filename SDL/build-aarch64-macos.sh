@@ -16,4 +16,4 @@ cmake -S "$DIR/source" -B "$BUILD" -G Ninja -C "$DIR/cache.cmake" \
   '-DCMAKE_INSTALL_RPATH=@loader_path;@loader_path/../lib'
 cmake --build "$BUILD"
 cmake --install "$BUILD"
-cmake "-DNAME=SDL" "-DSOURCE=$DIR/source" "-DSTAGE=$STAGE" -P "$ROOT/cmake/record.cmake"
+cmake "-DNAME=SDL" "-DSTAGE=$STAGE" -P "$ROOT/cmake/record.cmake"

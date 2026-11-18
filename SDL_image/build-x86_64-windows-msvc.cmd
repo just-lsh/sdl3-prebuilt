@@ -32,4 +32,4 @@ cmake --build "%BUILD%/static" || exit /b 1
 cmake --install "%BUILD%/static" || exit /b 1
 
 cmake "-DSOURCE=%DIR%/source/external/libwebp" "-DNAME=libwebp" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/licenses.cmake" || exit /b 1
-cmake "-DNAME=SDL_image" "-DSOURCE=%DIR%/source" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1
+cmake "-DNAME=SDL_image" "-DSTAGE=%STAGE%" "-DSDL_STAGE=%SDL_STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1

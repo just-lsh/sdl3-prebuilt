@@ -29,4 +29,4 @@ cmake -S "$DIR/source" -B "$BUILD/static" -G Ninja -C "$DIR/cache.cmake" \
 cmake --build "$BUILD/static"
 cmake --install "$BUILD/static"
 
-cmake "-DNAME=SDL_mixer" "-DSOURCE=$DIR/source" "-DSTAGE=$STAGE" -P "$ROOT/cmake/record.cmake"
+cmake "-DNAME=SDL_mixer" "-DSTAGE=$STAGE" "-DSDL_STAGE=$SDL_STAGE" -P "$ROOT/cmake/record.cmake"

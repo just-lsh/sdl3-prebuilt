@@ -33,4 +33,4 @@ cmake --build "$BUILD/static"
 cmake --install "$BUILD/static"
 
 cmake "-DSOURCE=$DIR/source/external/libwebp" "-DNAME=libwebp" "-DSTAGE=$STAGE" -P "$ROOT/cmake/licenses.cmake"
-cmake "-DNAME=SDL_image" "-DSOURCE=$DIR/source" "-DSTAGE=$STAGE" -P "$ROOT/cmake/record.cmake"
+cmake "-DNAME=SDL_image" "-DSTAGE=$STAGE" "-DSDL_STAGE=$SDL_STAGE" -P "$ROOT/cmake/record.cmake"

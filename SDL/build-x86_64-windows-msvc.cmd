@@ -15,4 +15,4 @@ cmake -S "%DIR%/source" -B "%BUILD%" -G Ninja -C "%DIR%/cache.cmake" ^
   "-DCMAKE_INSTALL_PREFIX=%STAGE%" || exit /b 1
 cmake --build "%BUILD%" || exit /b 1
 cmake --install "%BUILD%" || exit /b 1
-cmake "-DNAME=SDL" "-DSOURCE=%DIR%/source" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1
+cmake "-DNAME=SDL" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1

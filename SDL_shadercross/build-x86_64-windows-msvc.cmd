@@ -32,4 +32,4 @@ cmake --build "%BUILD%/shadercross" || exit /b 1
 cmake --install "%BUILD%/shadercross" || exit /b 1
 
 cmake "-DSOURCE=%DIR%/source/external/SPIRV-Cross" "-DNAME=SPIRV-Cross" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/licenses.cmake" || exit /b 1
-cmake "-DNAME=SDL_shadercross" "-DSOURCE=%DIR%/source" "-DSTAGE=%STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1
+cmake "-DNAME=SDL_shadercross" "-DSTAGE=%STAGE%" "-DSDL_STAGE=%SDL_STAGE%" -P "%ROOT%/cmake/record.cmake" || exit /b 1
