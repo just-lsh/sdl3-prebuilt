@@ -1,0 +1,40 @@
+#!/bin/sh
+# Build SDL_image (shared and static) for x86_64-macos into stage/x86_64-macos/SDL_image/.
+# Needs SDL built first.
+set -eu
+
+TARGET=x86_64-macos
+DIR=$(cd "$(dirname "$0")" && pwd)
+ROOT=$(dirname "$DIR")
+BUILD=$ROOT/build/$TARGET/SDL_image
+STAGE=$ROOT/stage/$TARGET/SDL_image
+SDL_STAGE=$ROOT/stage/$TARGET/SDL
+
+# Vendored third-party code for the enabled features (see cache.cmake).
+git -C "$DIR/source" submodule update --init --depth 1 -- external/libwebp
+
+# Shared libraries. Libraries find each other next to themselves,
+# executables look in ../lib.
+cmake -S "$DIR/source" -B "$BUILD/shared" -G Ninja -C "$DIR/cache.cmake" \
+  -DBUILD_SHARED_LIBS=ON \
+  "-DCMAKE_INSTALL_PREFIX=$STAGE" \
+  "-DCMAKE_PREFIX_PATH=$SDL_STAGE" \
+  -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+  '-DCMAKE_INSTALL_RPATH=@loader_path;@loader_path/../lib'
+cmake --build "$BUILD/shared"
+cmake --install "$BUILD/shared"
+
+# Static libraries.
+cmake -S "$DIR/source" -B "$BUILD/static" -G Ninja -C "$DIR/cache.cmake" \
+  -DBUILD_SHARED_LIBS=OFF \
+  "-DCMAKE_INSTALL_PREFIX=$STAGE" \
+  "-DCMAKE_PREFIX_PATH=$SDL_STAGE" \
+  -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+  '-DCMAKE_INSTALL_RPATH=@loader_path;@loader_path/../lib'
+cmake --build "$BUILD/static"
+cmake --install "$BUILD/static"
+
+cmake "-DSOURCE=$DIR/source/external/libwebp" "-DNAME=libwebp" "-DSTAGE=$STAGE" -P "$ROOT/cmake/licenses.cmake"
+cmake "-DNAME=SDL_image" "-DSTAGE=$STAGE" "-DSDL_STAGE=$SDL_STAGE" -P "$ROOT/cmake/record.cmake"

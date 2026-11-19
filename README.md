@@ -12,6 +12,7 @@ target they need instead of building SDL themselves.
 | `x86_64-linux-gnu`    | Steam Linux Runtime 3.0 (sniper) SDK | yes (DXC from source, sccache) |
 | `aarch64-linux-gnu`   | the same SDK, ARM64 (native)         | yes (DXC from source, sccache) |
 | `aarch64-macos`       | `macos-latest`                       | yes (DXC from source, sccache) |
+| `x86_64-macos`        | `macos-latest` (cross-compiled)      | yes (DXC from source, sccache) |
 
 Target names are Zig-style `<arch>-<os>[-<abi>]` triples. The ABI says what
 the binaries are compatible with: `msvc` means MSVC libraries with the static
@@ -19,7 +20,9 @@ CRT (`/MT`), not MinGW; `gnu` means glibc, not musl. The Linux builds are made
 in Valve's Steam Linux Runtime 3.0 ("sniper", Debian 11), each natively on an
 x64 or ARM64 runner, so they need glibc 2.31 or newer and also run inside that
 runtime. macOS 11.0 or newer. `aarch64-windows-msvc` is cross-compiled on the
-x64 runner, so CI builds but never runs it.
+x64 runner, so CI builds but never runs it. `x86_64-macos` is cross-compiled
+on the ARM64 macOS runner by Apple's clang; the build tools DXC compiles and
+runs along the way (LLVM's tablegen) run under Rosetta 2.
 
 ## Layout
 
@@ -210,7 +213,7 @@ gh release list --repo <owner>/sdl3-prebuilt --json tagName --jq '.[].tagName' |
   `.Windows`/`.amd64` -> `x86_64-windows-msvc`, `.Windows`/`.arm64` ->
   `aarch64-windows-msvc`, `.Linux`/`.amd64` -> `x86_64-linux-gnu`,
   `.Linux`/`.arm64` -> `aarch64-linux-gnu`, `.Darwin`/`.arm64` ->
-  `aarch64-macos`.
+  `aarch64-macos`, `.Darwin`/`.amd64` -> `x86_64-macos`.
 
 ## shadercross
 

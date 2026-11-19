@@ -72,6 +72,10 @@ jobs:
               container: "registry.gitlab.steamos.cloud/steamrt/sniper/sdk/arm64:latest",
             }
           - { target: aarch64-macos, os: macos-latest }
+          # Cross-compiled on the same ARM64 runner: Apple's clang targets
+          # x86_64 through CMAKE_OSX_ARCHITECTURES, and the tools DXC builds
+          # and runs during its build (tablegen) run under Rosetta 2.
+          - { target: x86_64-macos, os: macos-latest }
 
     steps:
       - uses: actions/checkout@v7
