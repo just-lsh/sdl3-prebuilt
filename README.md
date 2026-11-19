@@ -5,11 +5,11 @@ desktop targets and publishes them as GitHub releases, one release per
 library version. Projects download the archives for the libraries and
 target they need instead of building SDL themselves.
 
-| Target                | Runner                                 | shadercross                 |
-|-----------------------|----------------------------------------|-----------------------------|
-| `x86_64-windows-msvc` | `windows-2025`                         | yes (prebuilt DXC)          |
-| `x86_64-linux-gnu`    | Steam Linux Runtime 3.0 (sniper) SDK   | yes (DXC from source, slow) |
-| `aarch64-macos`       | `macos-latest`                         | yes (DXC from source, slow) |
+| Target                | Runner                               | shadercross                    |
+|-----------------------|--------------------------------------|--------------------------------|
+| `x86_64-windows-msvc` | `windows-2025`                       | yes (prebuilt DXC)             |
+| `x86_64-linux-gnu`    | Steam Linux Runtime 3.0 (sniper) SDK | yes (DXC from source, sccache) |
+| `aarch64-macos`       | `macos-latest`                       | yes (DXC from source, sccache) |
 
 Target names are Zig-style `<arch>-<os>[-<abi>]` triples. The ABI says what
 the binaries are compatible with: `msvc` means MSVC libraries with the static
@@ -34,7 +34,7 @@ cmake/
   package.cmake                 stage/<target>/<lib>/ -> dist/<name>-<target>.zip/.tar.gz + .sha256
 .github/workflows/
   build.yml                     matrix build, reused by the two below
-  ci.yml                        pull requests: build all libraries for all targets
+  ci.yml                        pull requests and main: build all libraries for all targets
   release.yml                   tag push: build one library for all targets, publish it
 ```
 
