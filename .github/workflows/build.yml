@@ -41,8 +41,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Pinned: the Windows build step hardcodes this image's Visual Studio path.
-          - { target: x86_64-windows-msvc, os: windows-2025 }
+          # Both Windows targets build on the x64 runner. vcvars is the
+          # vcvarsall.bat argument: native x64, or x64-hosted tools that
+          # cross-compile for ARM64. msvc is the Visual Studio component
+          # those tools come from.
+          - {
+              target: x86_64-windows-msvc,
+              os: windows-latest,
+              vcvars: x64,
+              msvc: Microsoft.VisualStudio.Component.VC.Tools.x86.x64,
+            }
+          - {
+              target: aarch64-windows-msvc,
+              os: windows-latest,
+              vcvars: x64_arm64,
+              msvc: Microsoft.VisualStudio.Component.VC.Tools.ARM64,
+            }
           # Steam Linux Runtime 3.0 (sniper) SDK: Debian 11, glibc 2.31, so the
           # libraries run on most distros and inside Steam's runtime. It ships
           # the SDL build dependencies and the toolchain.
@@ -115,7 +129,17 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          rem Find the newest Visual Studio that has the needed compiler, so
+          rem the step survives runner image updates.
+          set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+          set VCVARSALL=
+          for /f "usebackq delims=" %%P in (`"%VSWHERE%" -latest -products * -requires ${{ matrix.msvc }} -find VC\Auxiliary\Build\vcvarsall.bat`) do set "VCVARSALL=%%P"
+          if not defined VCVARSALL (
+            echo ::error::No Visual Studio with ${{ matrix.msvc }} on this runner
+            exit /b 1
+          )
+          echo Using %VCVARSALL%
+          call "%VCVARSALL%" ${{ matrix.vcvars }} || exit /b 1
           for %%L in (${{ inputs.libraries }}) do call %%L\build-${{ matrix.target }}.cmd || exit /b 1
 
       - name: Build
