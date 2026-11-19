@@ -78,11 +78,6 @@ jobs:
             echo "CMAKE_C_COMPILER_LAUNCHER=sccache"
             echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache"
           } >> "$GITHUB_ENV"
-          # TEMP: debug Windows cache misses.
-          if [ "$RUNNER_OS" = Windows ]; then
-            echo "SCCACHE_LOG=debug" >> "$GITHUB_ENV"
-            echo "SCCACHE_ERROR_LOG=$RUNNER_TEMP/sccache.log" >> "$GITHUB_ENV"
-          fi
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
@@ -97,17 +92,6 @@ jobs:
           for lib in ${{ inputs.libraries }}; do
             ./$lib/build-${{ matrix.target }}.sh
           done
-
-      # TEMP: debug Windows cache misses.
-      - name: Upload sccache log
-        if: always() && runner.os == 'Windows'
-        uses: actions/upload-artifact@v7
-        with:
-          name: sccache-log-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/sccache.log
-            build/**/build.ninja
-          retention-days: 3
 
       - name: Package
         shell: bash
