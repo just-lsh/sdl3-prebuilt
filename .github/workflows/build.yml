@@ -59,6 +59,26 @@ jobs:
         if: runner.os == 'Linux'
         run: git config --global --add safe.directory '*'
 
+      # sccache, so unchanged sources (above all DXC, built from source on
+      # Linux and macOS) are not recompiled on every run. Each object file is
+      # its own entry in the GitHub Actions cache, keyed on its preprocessed
+      # source, compiler and flags, so a bump of one library still reuses the
+      # rest. CMake picks the launcher up from CMAKE_<LANG>_COMPILER_LAUNCHER
+      # in the environment, so the build scripts stay unchanged.
+      - name: Set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+        with:
+          version: v0.19.0
+
+      - name: Use sccache
+        shell: bash
+        run: |
+          {
+            echo "SCCACHE_GHA_ENABLED=true"
+            echo "CMAKE_C_COMPILER_LAUNCHER=sccache"
+            echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache"
+          } >> "$GITHUB_ENV"
+
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: cmd
