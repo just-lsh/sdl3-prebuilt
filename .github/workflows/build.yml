@@ -59,14 +59,6 @@ jobs:
         if: runner.os == 'Linux'
         run: git config --global --add safe.directory '*'
 
-      - name: Install macOS build dependencies
-        if: runner.os == 'macOS'
-        run: brew install ninja
-
-      - name: Install Windows build dependencies
-        if: runner.os == 'Windows'
-        run: choco install ninja -y --no-progress
-
       - name: Build (Windows)
         if: runner.os == 'Windows'
         shell: cmd
