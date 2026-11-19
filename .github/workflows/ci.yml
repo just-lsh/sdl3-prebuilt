@@ -1,15 +1,9 @@
 # Every pull request (e.g. a version bump) is built on all targets.
 # Merge only when it is green; then tag to release.
-#
-# Pushes to main build too: pull requests and tags can only restore caches
-# saved on their own ref or on main, so main's runs keep the sccache cache warm
-# for everyone.
 name: ci
 
 on:
   pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -17,9 +11,12 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  # A cancelled main run would save no cache.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   build:
     uses: ./.github/workflows/build.yml
+    secrets:
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
