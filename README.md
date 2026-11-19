@@ -9,13 +9,15 @@ target they need instead of building SDL themselves.
 |-----------------------|--------------------------------------|--------------------------------|
 | `x86_64-windows-msvc` | `windows-2025`                       | yes (prebuilt DXC)             |
 | `x86_64-linux-gnu`    | Steam Linux Runtime 3.0 (sniper) SDK | yes (DXC from source, sccache) |
+| `aarch64-linux-gnu`   | the same SDK, ARM64 (native)         | yes (DXC from source, sccache) |
 | `aarch64-macos`       | `macos-latest`                       | yes (DXC from source, sccache) |
 
 Target names are Zig-style `<arch>-<os>[-<abi>]` triples. The ABI says what
 the binaries are compatible with: `msvc` means MSVC libraries with the static
-CRT (`/MT`), not MinGW; `gnu` means glibc, not musl. The Linux build is made in
-Valve's Steam Linux Runtime 3.0 ("sniper", Debian 11), so it needs glibc
-2.31 or newer and also runs inside that runtime. macOS 11.0 or newer.
+CRT (`/MT`), not MinGW; `gnu` means glibc, not musl. The Linux builds are made
+in Valve's Steam Linux Runtime 3.0 ("sniper", Debian 11), each natively on an
+x64 or ARM64 runner, so they need glibc 2.31 or newer and also run inside that
+runtime. macOS 11.0 or newer.
 
 ## Layout
 
@@ -61,7 +63,8 @@ Requirements: CMake 3.24+, Ninja, Git, and a C/C++ compiler.
   `.cmd` scripts from an x64 MSVC environment (the "x64 Native Tools Command
   Prompt", or after calling `vcvars64.bat`); the scripts don't set it up.
 - **Linux:** easiest in the same container CI uses, which has every
-  dependency: `registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest`.
+  dependency: `registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest`
+  (`sdk/arm64:latest` for `aarch64-linux-gnu`, on an ARM64 machine).
   Building on the host works too, but then the binaries need the host's
   glibc and SDL only gets the backends whose `-dev` packages are installed
   (see SDL's `docs/README-linux.md`).
@@ -200,7 +203,8 @@ gh release list --repo <owner>/sdl3-prebuilt --json tagName --jq '.[].tagName' |
   CRT setting, change `CMAKE_MSVC_RUNTIME_LIBRARY` in `cmake/common.cmake`.
 - **Picking the folder:** map `ODIN_OS`/`ODIN_ARCH` to a target name:
   `.Windows`/`.amd64` -> `x86_64-windows-msvc`, `.Linux`/`.amd64` ->
-  `x86_64-linux-gnu`, `.Darwin`/`.arm64` -> `aarch64-macos`.
+  `x86_64-linux-gnu`, `.Linux`/`.arm64` -> `aarch64-linux-gnu`,
+  `.Darwin`/`.arm64` -> `aarch64-macos`.
 
 ## shadercross
 
