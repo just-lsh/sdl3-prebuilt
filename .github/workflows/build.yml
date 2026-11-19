@@ -65,6 +65,12 @@ jobs:
               os: ubuntu-latest,
               container: "registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest",
             }
+          # The same runtime's ARM64 SDK, built natively on an ARM64 runner.
+          - {
+              target: aarch64-linux-gnu,
+              os: ubuntu-24.04-arm,
+              container: "registry.gitlab.steamos.cloud/steamrt/sniper/sdk/arm64:latest",
+            }
           - { target: aarch64-macos, os: macos-latest }
 
     steps:
