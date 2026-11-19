@@ -99,6 +99,10 @@ jobs:
             echo "AWS_SECRET_ACCESS_KEY=$R2_SECRET_ACCESS_KEY"
             echo "CMAKE_C_COMPILER_LAUNCHER=sccache"
             echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache"
+            # A cache hit mostly waits on the network, so run twice as many
+            # compiles as there are CPUs. Not more: an uncached DXC build
+            # needs a lot of memory, and the macOS runner has only 7 GB.
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(( $(getconf _NPROCESSORS_ONLN 2>/dev/null || echo "$NUMBER_OF_PROCESSORS") * 2 ))"
           } >> "$GITHUB_ENV"
 
       - name: Build (Windows)
