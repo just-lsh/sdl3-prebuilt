@@ -1,0 +1,107 @@
+# Pushing a tag <lib>-<version>-r<n> (e.g. SDL_image-3.4.8-r1) builds that
+# library for all targets and publishes a release with
+# <tag>-<target>.zip (Windows) or .tar.gz (others) and .sha256 for each target.
+name: release
+
+on:
+  push:
+    tags:
+      - "SDL-*"
+      - "SDL_image-*"
+      - "SDL_ttf-*"
+      - "SDL_mixer-*"
+      - "SDL_shadercross-*"
+
+permissions:
+  contents: read
+
+jobs:
+  # Checks the tag against the pinned submodule before anything is built.
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      library: ${{ steps.tag.outputs.library }}
+      libraries: ${{ steps.tag.outputs.libraries }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Check tag
+        id: tag
+        run: |
+          tag=$GITHUB_REF_NAME
+          if ! echo "$tag" | grep -Eq '^SDL[A-Za-z_]*-[0-9A-Za-z.]+-r[0-9]+$'; then
+            echo "::error::Tag '$tag' is not <lib>-<version>-r<n>"
+            exit 1
+          fi
+          lib=${tag%%-*}
+          rest=${tag#*-}
+          version=${rest%-r*}
+          expected=$(cmake -DLIB=$lib -P cmake/version.cmake)
+          if [ "$version" != "$expected" ]; then
+            echo "::error::Tag says $lib $version, but $lib/source is at $expected"
+            exit 1
+          fi
+          libraries=SDL
+          if [ "$lib" != SDL ]; then
+            libraries="SDL $lib"
+          fi
+          echo "library=$lib" >> "$GITHUB_OUTPUT"
+          echo "libraries=$libraries" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: resolve
+    uses: ./.github/workflows/build.yml
+    with:
+      libraries: ${{ needs.resolve.outputs.libraries }}
+      package: ${{ needs.resolve.outputs.library }}
+      name: ${{ github.ref_name }}
+
+  publish:
+    needs: [resolve, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Write release notes
+        env:
+          LIB: ${{ needs.resolve.outputs.library }}
+        run: |
+          # Every target records the same sources; read them from one .tar.gz.
+          archive=$(ls dist/*.tar.gz | head -n 1)
+          tar xzf "$archive" --wildcards "*/manifest/$LIB.txt" --strip-components 2
+          version=$(sed -n 's/^version=//p' "$LIB.txt")
+          commit=$(sed -n 's/^commit=//p' "$LIB.txt")
+          sdl_version=$(sed -n 's/^sdl-version=//p' "$LIB.txt")
+          sdl_commit=$(sed -n 's/^sdl-commit=//p' "$LIB.txt")
+          {
+            echo "$LIB $version, built from \`$commit\`."
+            if [ "$LIB" != SDL ]; then
+              echo
+              echo "Built against SDL $sdl_version (\`$sdl_commit\`)."
+              echo "Use it with that SDL release or a newer SDL 3 release."
+            fi
+            echo
+            echo "Release workflow ran on \`${GITHUB_SHA}\`."
+            echo
+            echo '### SHA-256'
+            echo '```'
+            cat dist/*.sha256
+            echo '```'
+          } > notes.md
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            --verify-tag

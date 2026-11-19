@@ -1,0 +1,43 @@
+#!/bin/sh
+# Build SDL_ttf (shared and static) for aarch64-macos into stage/aarch64-macos/SDL_ttf/.
+# Needs SDL built first.
+set -eu
+
+TARGET=aarch64-macos
+DIR=$(cd "$(dirname "$0")" && pwd)
+ROOT=$(dirname "$DIR")
+BUILD=$ROOT/build/$TARGET/SDL_ttf
+STAGE=$ROOT/stage/$TARGET/SDL_ttf
+SDL_STAGE=$ROOT/stage/$TARGET/SDL
+
+# Vendored third-party code for the enabled features (see cache.cmake).
+git -C "$DIR/source" submodule update --init --depth 1 -- external/freetype external/harfbuzz external/plutosvg external/plutovg
+
+# Shared libraries. Libraries find each other next to themselves,
+# executables look in ../lib.
+cmake -S "$DIR/source" -B "$BUILD/shared" -G Ninja -C "$DIR/cache.cmake" \
+  -DBUILD_SHARED_LIBS=ON \
+  "-DCMAKE_INSTALL_PREFIX=$STAGE" \
+  "-DCMAKE_PREFIX_PATH=$SDL_STAGE" \
+  -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+  '-DCMAKE_INSTALL_RPATH=@loader_path;@loader_path/../lib'
+cmake --build "$BUILD/shared"
+cmake --install "$BUILD/shared"
+
+# Static libraries.
+cmake -S "$DIR/source" -B "$BUILD/static" -G Ninja -C "$DIR/cache.cmake" \
+  -DBUILD_SHARED_LIBS=OFF \
+  "-DCMAKE_INSTALL_PREFIX=$STAGE" \
+  "-DCMAKE_PREFIX_PATH=$SDL_STAGE" \
+  -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+  '-DCMAKE_INSTALL_RPATH=@loader_path;@loader_path/../lib'
+cmake --build "$BUILD/static"
+cmake --install "$BUILD/static"
+
+cmake "-DSOURCE=$DIR/source/external/freetype" "-DNAME=freetype" "-DSTAGE=$STAGE" -P "$ROOT/cmake/licenses.cmake"
+cmake "-DSOURCE=$DIR/source/external/harfbuzz" "-DNAME=harfbuzz" "-DSTAGE=$STAGE" -P "$ROOT/cmake/licenses.cmake"
+cmake "-DSOURCE=$DIR/source/external/plutosvg" "-DNAME=plutosvg" "-DSTAGE=$STAGE" -P "$ROOT/cmake/licenses.cmake"
+cmake "-DSOURCE=$DIR/source/external/plutovg" "-DNAME=plutovg" "-DSTAGE=$STAGE" -P "$ROOT/cmake/licenses.cmake"
+cmake "-DNAME=SDL_ttf" "-DSTAGE=$STAGE" "-DSDL_STAGE=$SDL_STAGE" -P "$ROOT/cmake/record.cmake"

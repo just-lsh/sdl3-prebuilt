@@ -1,0 +1,89 @@
+# Builds libraries for every target and uploads one artifact per target,
+# holding one archive per packaged library.
+# Called by ci.yml (pull requests: everything) and release.yml (tags: one
+# library); not run on its own.
+name: build
+
+on:
+  workflow_call:
+    inputs:
+      libraries:
+        description: Libraries to build, in order. SDL has to come first.
+        type: string
+        default: SDL SDL_image SDL_ttf SDL_mixer SDL_shadercross
+      package:
+        description: Libraries to package.
+        type: string
+        default: SDL SDL_image SDL_ttf SDL_mixer SDL_shadercross
+      name:
+        description: Archive base name (releases pass the tag). Defaults to the library name.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    # Empty for targets that build directly on the runner.
+    container: ${{ matrix.container }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Pinned: the Windows build step hardcodes this image's Visual Studio path.
+          - { target: x86_64-windows-msvc, os: windows-2025 }
+          # Steam Linux Runtime 3.0 (sniper) SDK: Debian 11, glibc 2.31, so the
+          # libraries run on most distros and inside Steam's runtime. It ships
+          # the SDL build dependencies and the toolchain.
+          - {
+              target: x86_64-linux-gnu,
+              os: ubuntu-latest,
+              container: "registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest",
+            }
+          - { target: aarch64-macos, os: macos-latest }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Top-level submodules only. The build scripts fetch the nested ones they need.
+          submodules: true
+
+      # The checkout belongs to a different user than the container's root, so
+      # Git refuses to work in it. The build scripts run git to fetch nested
+      # submodules.
+      - name: Trust the checkout (Linux container)
+        if: runner.os == 'Linux'
+        run: git config --global --add safe.directory '*'
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          for %%L in (${{ inputs.libraries }}) do call %%L\build-${{ matrix.target }}.cmd || exit /b 1
+
+      - name: Build
+        if: runner.os != 'Windows'
+        run: |
+          for lib in ${{ inputs.libraries }}; do
+            ./$lib/build-${{ matrix.target }}.sh
+          done
+
+      - name: Package
+        shell: bash
+        run: |
+          name='${{ inputs.name }}'
+          for lib in ${{ inputs.package }}; do
+            cmake -DTARGET=${{ matrix.target }} -DLIB=$lib "-DNAME=${name:-$lib}" -P cmake/package.cmake
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14

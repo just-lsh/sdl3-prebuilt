@@ -1,0 +1,21 @@
+[submodule "SDL/source"]
+	path = SDL/source
+	url = https://github.com/libsdl-org/SDL.git
+	shallow = true
+[submodule "SDL_image/source"]
+	path = SDL_image/source
+	url = https://github.com/libsdl-org/SDL_image.git
+	shallow = true
+[submodule "SDL_ttf/source"]
+	path = SDL_ttf/source
+	url = https://github.com/libsdl-org/SDL_ttf.git
+	shallow = true
+[submodule "SDL_mixer/source"]
+	path = SDL_mixer/source
+	url = https://github.com/libsdl-org/SDL_mixer.git
+	shallow = true
+[submodule "SDL_shadercross/source"]
+	path = SDL_shadercross/source
+	url = https://github.com/libsdl-org/SDL_shadercross.git
+	shallow = true
+	ignore = untracked
