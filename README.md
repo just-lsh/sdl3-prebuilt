@@ -7,7 +7,8 @@ target they need instead of building SDL themselves.
 
 | Target                | Runner                               | shadercross                    |
 |-----------------------|--------------------------------------|--------------------------------|
-| `x86_64-windows-msvc` | `windows-2025`                       | yes (prebuilt DXC)             |
+| `x86_64-windows-msvc` | `windows-latest`                     | yes (prebuilt DXC)             |
+| `aarch64-windows-msvc`| `windows-latest` (cross-compiled)    | yes (prebuilt DXC)             |
 | `x86_64-linux-gnu`    | Steam Linux Runtime 3.0 (sniper) SDK | yes (DXC from source, sccache) |
 | `aarch64-macos`       | `macos-latest`                       | yes (DXC from source, sccache) |
 
@@ -16,6 +17,8 @@ the binaries are compatible with: `msvc` means MSVC libraries with the static
 CRT (`/MT`), not MinGW; `gnu` means glibc, not musl. The Linux build is made in
 Valve's Steam Linux Runtime 3.0 ("sniper", Debian 11), so it needs glibc
 2.31 or newer and also runs inside that runtime. macOS 11.0 or newer.
+`aarch64-windows-msvc` is cross-compiled on the x64 runner, so CI builds but
+never runs it.
 
 ## Layout
 
@@ -58,8 +61,11 @@ cmake -DTARGET=x86_64-linux-gnu -DLIB=SDL_image -P cmake/package.cmake
 Requirements: CMake 3.24+, Ninja, Git, and a C/C++ compiler.
 
 - **Windows:** Visual Studio 2022 or newer with the C++ workload. Run the
-  `.cmd` scripts from an x64 MSVC environment (the "x64 Native Tools Command
-  Prompt", or after calling `vcvars64.bat`); the scripts don't set it up.
+  `x86_64-windows-msvc` scripts from an x64 MSVC environment (the "x64 Native
+  Tools Command Prompt", or after calling `vcvars64.bat`); the scripts don't
+  set it up. `aarch64-windows-msvc` also needs the "MSVC ARM64 build tools"
+  component; run its scripts from the "x64_arm64 Cross Tools Command Prompt"
+  (`vcvarsamd64_arm64.bat`).
 - **Linux:** easiest in the same container CI uses, which has every
   dependency: `registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest`.
   Building on the host works too, but then the binaries need the host's
@@ -199,7 +205,8 @@ gh release list --repo <owner>/sdl3-prebuilt --json tagName --jq '.[].tagName' |
   Odin's default (`libcmt`). If you build your Odin program with a different
   CRT setting, change `CMAKE_MSVC_RUNTIME_LIBRARY` in `cmake/common.cmake`.
 - **Picking the folder:** map `ODIN_OS`/`ODIN_ARCH` to a target name:
-  `.Windows`/`.amd64` -> `x86_64-windows-msvc`, `.Linux`/`.amd64` ->
+  `.Windows`/`.amd64` -> `x86_64-windows-msvc`, `.Windows`/`.arm64` ->
+  `aarch64-windows-msvc`, `.Linux`/`.amd64` ->
   `x86_64-linux-gnu`, `.Darwin`/`.arm64` -> `aarch64-macos`.
 
 ## shadercross
@@ -250,8 +257,8 @@ foreign import shadercross {
 
 - **Windows:** Microsoft's prebuilt DXC release, whose URL and hash are
   pinned by shadercross itself (`SDL_shadercross/dxc.cmake` downloads it and
-  copies the runtime into the stage). SPIRV-Cross is built first as a
-  separate project.
+  copies the x64 or ARM64 runtime into the stage). SPIRV-Cross is built first
+  as a separate project.
 - **Linux, macOS:** DXC (an LLVM fork) is built from source together with
   shadercross. Expect 30-60+ minutes. macOS has no prebuilt release, and
   the Linux one needs glibc 2.38, much newer than sniper's 2.31.
