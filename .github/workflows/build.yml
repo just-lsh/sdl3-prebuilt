@@ -6,6 +6,13 @@ name: build
 
 on:
   workflow_call:
+    secrets:
+      R2_ACCESS_KEY_ID:
+        required: false
+      R2_SECRET_ACCESS_KEY:
+        required: false
+      R2_ENDPOINT:
+        required: false
     inputs:
       libraries:
         description: Libraries to build, in order. SDL has to come first.
@@ -61,20 +68,35 @@ jobs:
 
       # sccache, so unchanged sources (above all DXC, built from source on
       # Linux and macOS) are not recompiled on every run. Each object file is
-      # its own entry in the GitHub Actions cache, keyed on its preprocessed
+      # its own entry in a Cloudflare R2 bucket, keyed on its preprocessed
       # source, compiler and flags, so a bump of one library still reuses the
-      # rest. CMake picks the launcher up from CMAKE_<LANG>_COMPILER_LAUNCHER
-      # in the environment, so the build scripts stay unchanged.
+      # rest, and every branch, pull request and tag shares one cache. CMake
+      # picks the launcher up from CMAKE_<LANG>_COMPILER_LAUNCHER in the
+      # environment, so the build scripts stay unchanged.
       - name: Set up sccache
         uses: mozilla-actions/sccache-action@v0.0.11
         with:
           version: v0.19.0
 
+      # Runs without secrets (pull requests from forks) build without the cache.
       - name: Use sccache
         shell: bash
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
         run: |
+          if [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_BUCKET" ]; then
+            echo "::notice::No R2 credentials; building without sccache."
+            exit 0
+          fi
           {
-            echo "SCCACHE_GHA_ENABLED=true"
+            echo "SCCACHE_BUCKET=$R2_BUCKET"
+            echo "SCCACHE_ENDPOINT=$R2_ENDPOINT"
+            echo "SCCACHE_REGION=auto"
+            echo "AWS_ACCESS_KEY_ID=$R2_ACCESS_KEY_ID"
+            echo "AWS_SECRET_ACCESS_KEY=$R2_SECRET_ACCESS_KEY"
             echo "CMAKE_C_COMPILER_LAUNCHER=sccache"
             echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache"
           } >> "$GITHUB_ENV"

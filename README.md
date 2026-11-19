@@ -34,7 +34,7 @@ cmake/
   package.cmake                 stage/<target>/<lib>/ -> dist/<name>-<target>.zip/.tar.gz + .sha256
 .github/workflows/
   build.yml                     matrix build, reused by the two below
-  ci.yml                        pull requests and main: build all libraries for all targets
+  ci.yml                        pull requests: build all libraries for all targets
   release.yml                   tag push: build one library for all targets, publish it
 ```
 
@@ -117,6 +117,22 @@ commit, the SDL the library was built against, and the checksums.
 To fix an older release after `main` has moved on, branch from its tag
 (`git switch -c fix/SDL_image-3.4.8 SDL_image-3.4.8-r1`), fix, and tag
 `-r2` there.
+
+## CI build cache
+
+CI compiles through [sccache](https://github.com/mozilla/sccache), backed by
+a Cloudflare R2 bucket shared by all branches, pull requests and tags, so
+unchanged sources (above all DXC) aren't recompiled. It needs these
+repository settings, as Actions secrets and again as Dependabot secrets:
+
+- secrets `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`: an R2 API token with
+  Object Read & Write on the bucket only
+- secret `R2_ENDPOINT`: `https://<account-id>.r2.cloudflarestorage.com`
+- variable `R2_BUCKET`: the bucket name
+
+The bucket has a lifecycle rule deleting objects 30 days after upload;
+sccache never removes entries itself. Without the secrets (e.g. pull
+requests from forks) the build runs uncached.
 
 ## Using the releases
 
