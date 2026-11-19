@@ -47,7 +47,7 @@ jobs:
           - { target: aarch64-macos, os: macos-latest }
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Top-level submodules only. The build scripts fetch the nested ones they need.
           submodules: true
@@ -81,7 +81,7 @@ jobs:
             cmake -DTARGET=${{ matrix.target }} -DLIB=$lib "-DNAME=${name:-$lib}" -P cmake/package.cmake
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: dist/*
